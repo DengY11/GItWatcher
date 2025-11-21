@@ -64,3 +64,31 @@ func TestLateNightCommits(t *testing.T) {
 		t.Errorf("Expected Bob to have 1 late night commit, got %d", authors["Bob"])
 	}
 }
+
+func TestWeekendCommits(t *testing.T) {
+	commits := []analyzer.CommitInfo{
+		{Author: "Alice", Date: time.Date(2024, 7, 27, 10, 0, 0, 0, time.UTC)}, // Saturday
+		{Author: "Bob", Date: time.Date(2024, 7, 28, 11, 0, 0, 0, time.UTC)},   // Sunday
+		{Author: "Alice", Date: time.Date(2024, 7, 28, 12, 0, 0, 0, time.UTC)},  // Sunday
+		{Author: "Charlie", Date: time.Date(2024, 7, 29, 9, 0, 0, 0, time.UTC)}, // Monday
+	}
+
+	stat := &WeekendCommits{}
+	result := stat.Calculate(commits).(map[string]interface{})
+
+	total := result["total"].(int)
+	if total != 3 {
+		t.Errorf("Expected 3 weekend commits, got %d", total)
+	}
+
+	authors := result["authors"].(map[string]int)
+	if authors["Alice"] != 2 {
+		t.Errorf("Expected Alice to have 2 weekend commits, got %d", authors["Alice"])
+	}
+	if authors["Bob"] != 1 {
+		t.Errorf("Expected Bob to have 1 weekend commit, got %d", authors["Bob"])
+	}
+	if _, ok := authors["Charlie"]; ok {
+		t.Errorf("Expected Charlie to have 0 weekend commits, but was found in authors map")
+	}
+}

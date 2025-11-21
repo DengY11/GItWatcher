@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"git-watcher/pkg/analyzer"
 	"git-watcher/pkg/scanner"
 	"git-watcher/pkg/stats"
+
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -44,10 +45,10 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	allStats := make(map[string]interface{})
-	
+
 	for _, repo := range repos {
 		fmt.Printf("正在分析仓库: %s\n", repo)
-		
+
 		analyzer := analyzer.NewGitAnalyzer(repo)
 		commits, err := analyzer.GetCommitInfo()
 		if err != nil {
@@ -57,7 +58,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 		calculator := stats.NewStatsCalculator()
 		repoStats := calculator.CalculateAll(commits)
-		
+
 		allStats[repo] = map[string]interface{}{
 			"total_commits": len(commits),
 			"statistics":    repoStats,
@@ -83,18 +84,18 @@ func run(cmd *cobra.Command, args []string) error {
 func printTextOutput(allStats map[string]interface{}) {
 	for repo, repoData := range allStats {
 		fmt.Printf("\n=== 仓库: %s ===\n", repo)
-		
+
 		data := repoData.(map[string]interface{})
 		fmt.Printf("总提交数: %v\n", data["total_commits"])
-		
+
 		stats := data["statistics"].(map[string]interface{})
-		
+
 		if latestCommit := stats["latest_commit"]; latestCommit != nil {
 			commit := latestCommit.(analyzer.CommitInfo)
-			fmt.Printf("最新提交: %s by %s at %s\n", 
+			fmt.Printf("最新提交: %s by %s at %s\n",
 				commit.Hash[:7], commit.Author, commit.Date.Format("2006-01-02 15:04:05"))
 		}
-		
+
 		if authorCounts := stats["commit_count_by_author"]; authorCounts != nil {
 			fmt.Println("\n提交者统计:")
 			authors := authorCounts.(map[string]int)
@@ -102,7 +103,7 @@ func printTextOutput(allStats map[string]interface{}) {
 				fmt.Printf("  %s: %d次\n", author, count)
 			}
 		}
-		
+
 		if lateNight := stats["late_night_commits"]; lateNight != nil {
 			lateNightData := lateNight.(map[string]interface{})
 			fmt.Printf("\n深夜提交 (23:00-06:00): %v次\n", lateNightData["total"])
@@ -113,5 +114,17 @@ func printTextOutput(allStats map[string]interface{}) {
 				}
 			}
 		}
+
+		if weekend := stats["weekend_commits"]; weekend != nil {
+			weekendData := weekend.(map[string]interface{})
+			fmt.Printf("\n周末提交: %v次\n", weekendData["total"])
+			if authors := weekendData["authors"].(map[string]int); len(authors) > 0 {
+				fmt.Println("周末提交者:")
+				for author, count := range authors {
+					fmt.Printf("  %s: %d次\n", author, count)
+				}
+			}
+		}
+
 	}
 }

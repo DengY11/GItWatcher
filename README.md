@@ -15,8 +15,9 @@
 ## 安装
 
 ```bash
-go mod download
+go mod tidy
 go build -o git-watcher
+mv git-watcher /usr/local/bin/
 ```
 
 ## 使用方法
@@ -25,13 +26,13 @@ go build -o git-watcher
 
 ```bash
 # 扫描当前目录
-./git-watcher
+git-watcher
 
 # 扫描指定目录
-./git-watcher -p /path/to/directory
+git-watcher -p /path/to/directory
 
 # 输出文本格式
-./git-watcher -p /path/to/directory -o text
+git-watcher -p /path/to/directory -o text
 ```
 
 ### 命令行参数
@@ -84,9 +85,9 @@ go build -o git-watcher
 最新提交: abc123 by 张三 at 2024-01-15 14:30:00
 
 提交者统计:
-  张三: 80次
-  李四: 45次
-  王五: 25次
+  蒋波: 80次
+  龙飞: 45次
+  王: 25次
 
 深夜提交 (23:00-06:00): 12次
 深夜提交者:
@@ -109,7 +110,7 @@ type Statistics interface {
 
 ## 开发计划
 
-- [ ] 添加更多统计维度（工作日/周末提交、代码行数统计等）
+- [x] 添加更多统计维度（工作日/周末提交、代码行数统计等）
 - [ ] 支持导出为CSV格式
 - [ ] 添加Web界面展示统计结果
 - [ ] 支持GitHub API集成

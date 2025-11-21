@@ -2,6 +2,7 @@ package stats
 
 import (
 	"git-watcher/pkg/analyzer"
+	"time"
 )
 
 type Statistics interface {
@@ -33,7 +34,7 @@ func (l *LatestCommit) Calculate(commits []analyzer.CommitInfo) interface{} {
 	if len(commits) == 0 {
 		return nil
 	}
-	
+
 	latest := commits[0]
 	for _, commit := range commits {
 		if commit.Date.After(latest.Date) {
@@ -52,7 +53,7 @@ func (l *LateNightCommits) Name() string {
 func (l *LateNightCommits) Calculate(commits []analyzer.CommitInfo) interface{} {
 	lateNightCount := 0
 	lateNightAuthors := make(map[string]int)
-	
+
 	for _, commit := range commits {
 		hour := commit.Date.Hour()
 		if hour >= 23 || hour <= 6 {
@@ -60,9 +61,9 @@ func (l *LateNightCommits) Calculate(commits []analyzer.CommitInfo) interface{} 
 			lateNightAuthors[commit.Author]++
 		}
 	}
-	
+
 	return map[string]interface{}{
-		"total":  lateNightCount,
+		"total":   lateNightCount,
 		"authors": lateNightAuthors,
 	}
 }
@@ -93,6 +94,7 @@ func NewStatsCalculator() *StatsCalculator {
 			&LatestCommit{},
 			&LateNightCommits{},
 			&CommitActivityByHour{},
+			&WeekendCommits{},
 		},
 	}
 }
@@ -103,10 +105,39 @@ func (sc *StatsCalculator) AddStatistic(stat Statistics) {
 
 func (sc *StatsCalculator) CalculateAll(commits []analyzer.CommitInfo) map[string]interface{} {
 	results := make(map[string]interface{})
-	
+
 	for _, stat := range sc.statistics {
 		results[stat.Name()] = stat.Calculate(commits)
 	}
-	
+
 	return results
+}
+
+type WeekendCommits struct{
+	//this is fucking truly work life balance
+}
+
+func (w *WeekendCommits) Name() string {
+	return "weekend_commits"
+}
+
+func (w *WeekendCommits) Calculate(commits []analyzer.CommitInfo) interface{} {
+	weekendCount := 0
+	weekendAuthors := make(map[string]int)
+
+	isWeekend := func(date time.Time) bool {
+		weekday := date.Weekday()
+		return weekday == time.Saturday || weekday == time.Sunday
+	}
+	for _, commit := range commits {
+		if isWeekend(commit.Date) {
+			weekendCount++
+			weekendAuthors[commit.Author]++
+		}
+	}
+
+	return map[string]interface{}{
+		"total":   weekendCount,
+		"authors": weekendAuthors,
+	}
 }
