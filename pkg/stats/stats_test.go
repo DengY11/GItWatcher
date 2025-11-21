@@ -92,3 +92,21 @@ func TestWeekendCommits(t *testing.T) {
 		t.Errorf("Expected Charlie to have 0 weekend commits, but was found in authors map")
 	}
 }
+
+func TestCommitLineCountByAuthor(t *testing.T) {
+	commits := []analyzer.CommitInfo{
+		{Author: "Alice", LineCount: 100},
+		{Author: "Bob", LineCount: 50},
+		{Author: "Alice", LineCount: 75},
+	}
+
+	stat := &CommitLineCountByAuthor{}
+	result := stat.Calculate(commits).(map[string]int64)
+
+	if result["Alice"] != 175 {
+		t.Errorf("Expected Alice to have 175 lines, got %d", result["Alice"])
+	}
+	if result["Bob"] != 50 {
+		t.Errorf("Expected Bob to have 50 lines, got %d", result["Bob"])
+	}
+}

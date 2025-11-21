@@ -48,6 +48,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 	for _, repo := range repos {
 		fmt.Printf("正在分析仓库: %s\n", repo)
+		fmt.Println("耐心点，大型仓库会很耗时")
 
 		analyzer := analyzer.NewGitAnalyzer(repo)
 		commits, err := analyzer.GetCommitInfo()
@@ -125,6 +126,12 @@ func printTextOutput(allStats map[string]interface{}) {
 				}
 			}
 		}
-
+		if lineCountByAuthor := stats["commit_line_count_by_author"]; lineCountByAuthor != nil {
+			fmt.Println("\n提交者代码行统计:")
+			lineCounts := lineCountByAuthor.(map[string]int)
+			for author, count := range lineCounts {
+				fmt.Printf("  %s: %d行\n", author, count)
+			}
+		}
 	}
 }

@@ -2,9 +2,12 @@ package analyzer
 
 import (
 	"fmt"
+	"runtime"
+	"sync"
 	"time"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
@@ -14,6 +17,7 @@ type CommitInfo struct {
 	Date      time.Time
 	Message   string
 	Hash      string
+	LineCount int64
 }
 
 type GitAnalyzer struct {
@@ -40,20 +44,67 @@ func (ga *GitAnalyzer) GetCommitInfo() ([]CommitInfo, error) {
 		return nil, fmt.Errorf("failed to get commit log: %w", err)
 	}
 
-	var commits []CommitInfo
+	var commitHashes []plumbing.Hash
 	err = commitIter.ForEach(func(c *object.Commit) error {
-		commits = append(commits, CommitInfo{
-			Author:  c.Author.Name,
-			Email:   c.Author.Email,
-			Date:    c.Author.When,
-			Message: c.Message,
-			Hash:    c.Hash.String(),
-		})
+		commitHashes = append(commitHashes, c.Hash)
 		return nil
 	})
-
 	if err != nil {
-		return nil, fmt.Errorf("failed to iterate commits: %w", err)
+		return nil, fmt.Errorf("failed to iterate commits for hashes: %w", err)
+	}
+
+	numWorkers := runtime.NumCPU()
+	hashChan := make(chan plumbing.Hash, len(commitHashes))
+	resultsChan := make(chan CommitInfo, len(commitHashes))
+	var wg sync.WaitGroup
+
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			workerRepo, err := git.PlainOpen(ga.repoPath)
+			if err != nil {
+				return
+			}
+
+			for hash := range hashChan {
+				c, err := workerRepo.CommitObject(hash)
+				if err != nil {
+					continue
+				}
+
+				stats, err := c.Stats()
+				if err != nil {
+					continue
+				}
+				var totalLines int64
+				for _, stat := range stats {
+					totalLines += int64(stat.Addition + stat.Deletion)
+				}
+
+				resultsChan <- CommitInfo{
+					Author:    c.Author.Name,
+					Email:     c.Author.Email,
+					Date:      c.Author.When,
+					Message:   c.Message,
+					Hash:      c.Hash.String(),
+					LineCount: totalLines,
+				}
+			}
+		}()
+	}
+
+	for _, hash := range commitHashes {
+		hashChan <- hash
+	}
+	close(hashChan)
+
+	wg.Wait()
+	close(resultsChan)
+
+	var commits []CommitInfo
+	for commitInfo := range resultsChan {
+		commits = append(commits, commitInfo)
 	}
 
 	return commits, nil

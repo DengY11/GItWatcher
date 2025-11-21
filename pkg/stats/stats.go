@@ -6,6 +6,9 @@ import (
 )
 
 type Statistics interface {
+	/*
+		any statistics type should implement this interface
+	*/
 	Calculate(commits []analyzer.CommitInfo) interface{}
 	Name() string
 }
@@ -99,6 +102,7 @@ func NewStatsCalculator() *StatsCalculator {
 			&LateNightCommits{},
 			&CommitActivityByHour{},
 			&WeekendCommits{},
+			&CommitLineCountByAuthor{},
 			/*
 				you just need to implement Statistics interface
 				and add it here
@@ -148,4 +152,19 @@ func (w *WeekendCommits) Calculate(commits []analyzer.CommitInfo) interface{} {
 		"total":   weekendCount,
 		"authors": weekendAuthors,
 	}
+}
+
+type CommitLineCountByAuthor struct {
+}
+
+func (c *CommitLineCountByAuthor) Name() string {
+	return "commit_line_count_by_author"
+}
+
+func (c *CommitLineCountByAuthor) Calculate(commits []analyzer.CommitInfo) interface{} {
+	lineCount := make(map[string]int64)
+	for _, commit := range commits {
+		lineCount[commit.Author] += commit.LineCount
+	}
+	return lineCount
 }
