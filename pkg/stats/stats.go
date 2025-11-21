@@ -24,7 +24,11 @@ func (c *CommitCountByAuthor) Calculate(commits []analyzer.CommitInfo) interface
 	return authorCount
 }
 
-type LatestCommit struct{}
+type LatestCommit struct {
+	// I fuck the company that I work for,
+	// work too fucking late
+	// go to a work life balance company
+}
 
 func (l *LatestCommit) Name() string {
 	return "latest_commit"
@@ -95,6 +99,10 @@ func NewStatsCalculator() *StatsCalculator {
 			&LateNightCommits{},
 			&CommitActivityByHour{},
 			&WeekendCommits{},
+			/*
+				you just need to implement Statistics interface
+				and add it here
+			*/
 		},
 	}
 }
@@ -113,7 +121,7 @@ func (sc *StatsCalculator) CalculateAll(commits []analyzer.CommitInfo) map[strin
 	return results
 }
 
-type WeekendCommits struct{
+type WeekendCommits struct {
 	//this is fucking truly work life balance
 }
 
