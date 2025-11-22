@@ -17,7 +17,7 @@
 ```bash
 go mod tidy
 go build -o git-watcher
-mv git-watcher /usr/local/bin/
+cp git-watcher /usr/local/bin/
 ```
 
 ## 使用方法
