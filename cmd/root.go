@@ -18,8 +18,8 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "git-watcher",
-	Short: "Git仓库统计工具",
-	Long:  `递归扫描指定目录下的所有Git仓库，并统计各种信息如提交者、提交时间、深夜提交次数等`,
+	Short: "Git repository statistics tool",
+	Long:  `Recursively scan the specified directory for Git repositories and compute statistics such as authors, commit times, late-night commits, etc.`,
 	RunE:  run,
 }
 
@@ -28,32 +28,32 @@ func Execute() error {
 }
 
 func init() {
-	rootCmd.Flags().StringVarP(&rootPath, "path", "p", ".", "要扫描的目录路径")
-	rootCmd.Flags().StringVarP(&output, "output", "o", "json", "输出格式 (json|text)")
+	rootCmd.Flags().StringVarP(&rootPath, "path", "p", ".", "Directory path to scan")
+	rootCmd.Flags().StringVarP(&output, "output", "o", "json", "Output format (json|text)")
 }
 
 func run(cmd *cobra.Command, args []string) error {
 	gitScanner := scanner.NewGitScanner()
 	repos, err := gitScanner.ScanDirectory(rootPath)
 	if err != nil {
-		return fmt.Errorf("扫描目录失败: %w", err)
+		return fmt.Errorf("failed to scan directory: %w", err)
 	}
 
 	if len(repos) == 0 {
-		fmt.Println("未找到Git仓库")
+		fmt.Println("No Git repositories found")
 		return nil
 	}
 
 	allStats := make(map[string]interface{})
 
 	for _, repo := range repos {
-		fmt.Printf("正在分析仓库: %s\n", repo)
-		fmt.Println("耐心点，大型仓库会很耗时")
+		fmt.Printf("Analyzing repository: %s\n", repo)
+		fmt.Println("Large repositories may take time")
 
 		analyzer := analyzer.NewGitAnalyzer(repo)
 		commits, err := analyzer.GetCommitInfo()
 		if err != nil {
-			fmt.Printf("分析仓库 %s 失败: %v\n", repo, err)
+			fmt.Printf("Failed to analyze repository %s: %v\n", repo, err)
 			continue
 		}
 
@@ -70,13 +70,13 @@ func run(cmd *cobra.Command, args []string) error {
 	case "json":
 		jsonOutput, err := json.MarshalIndent(allStats, "", "  ")
 		if err != nil {
-			return fmt.Errorf("生成JSON输出失败: %w", err)
+			return fmt.Errorf("failed to generate JSON output: %w", err)
 		}
 		fmt.Println(string(jsonOutput))
 	case "text":
 		printTextOutput(allStats)
 	default:
-		return fmt.Errorf("不支持的输出格式: %s", output)
+		return fmt.Errorf("unsupported output format: %s", output)
 	}
 
 	return nil
@@ -84,53 +84,53 @@ func run(cmd *cobra.Command, args []string) error {
 
 func printTextOutput(allStats map[string]interface{}) {
 	for repo, repoData := range allStats {
-		fmt.Printf("\n=== 仓库: %s ===\n", repo)
+		fmt.Printf("\n=== Repository: %s ===\n", repo)
 
 		data := repoData.(map[string]interface{})
-		fmt.Printf("总提交数: %v\n", data["total_commits"])
+		fmt.Printf("Total commits: %v\n", data["total_commits"])
 
 		stats := data["statistics"].(map[string]interface{})
 
 		if latestCommit := stats["latest_commit"]; latestCommit != nil {
 			commit := latestCommit.(analyzer.CommitInfo)
-			fmt.Printf("最新提交: %s by %s at %s\n",
+			fmt.Printf("Latest commit: %s by %s at %s\n",
 				commit.Hash[:7], commit.Author, commit.Date.Format("2006-01-02 15:04:05"))
 		}
 
 		if authorCounts := stats["commit_count_by_author"]; authorCounts != nil {
-			fmt.Println("\n提交者统计:")
+			fmt.Println("\nAuthor statistics:")
 			authors := authorCounts.(map[string]int)
 			for author, count := range authors {
-				fmt.Printf("  %s: %d次\n", author, count)
+				fmt.Printf("  %s: %d\n", author, count)
 			}
 		}
 
 		if lateNight := stats["late_night_commits"]; lateNight != nil {
 			lateNightData := lateNight.(map[string]interface{})
-			fmt.Printf("\n深夜提交 (23:00-06:00): %v次\n", lateNightData["total"])
+			fmt.Printf("\nLate-night commits (23:00-06:00): %v\n", lateNightData["total"])
 			if authors := lateNightData["authors"].(map[string]int); len(authors) > 0 {
-				fmt.Println("深夜提交者:")
+				fmt.Println("Late-night authors:")
 				for author, count := range authors {
-					fmt.Printf("  %s: %d次\n", author, count)
+					fmt.Printf("  %s: %d\n", author, count)
 				}
 			}
 		}
 
 		if weekend := stats["weekend_commits"]; weekend != nil {
 			weekendData := weekend.(map[string]interface{})
-			fmt.Printf("\n周末提交: %v次\n", weekendData["total"])
+			fmt.Printf("\nWeekend commits: %v\n", weekendData["total"])
 			if authors := weekendData["authors"].(map[string]int); len(authors) > 0 {
-				fmt.Println("周末提交者:")
+				fmt.Println("Weekend authors:")
 				for author, count := range authors {
-					fmt.Printf("  %s: %d次\n", author, count)
+					fmt.Printf("  %s: %d\n", author, count)
 				}
 			}
 		}
 		if lineCountByAuthor := stats["commit_line_count_by_author"]; lineCountByAuthor != nil {
-			fmt.Println("\n提交者代码行统计:")
-			lineCounts := lineCountByAuthor.(map[string]int)
+			fmt.Println("\nLines changed by author:")
+			lineCounts := lineCountByAuthor.(map[string]int64)
 			for author, count := range lineCounts {
-				fmt.Printf("  %s: %d行\n", author, count)
+				fmt.Printf("  %s: %d\n", author, count)
 			}
 		}
 	}
