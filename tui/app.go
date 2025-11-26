@@ -134,6 +134,7 @@ func StartTUI(rootPath string) error {
 		if selectedRepo == "" {
 			fmt.Fprintln(b, "No repository selected")
 		} else {
+			// commits per author
 			stat := ctrl.State.StatsByRepo[selectedRepo]["commit_count_by_author"]
 			if stat != nil {
 				m := stat.(map[string]int)
@@ -150,8 +151,50 @@ func StartTUI(rootPath string) error {
 				} else {
 					sort.Slice(arr, func(i, j int) bool { return arr[i].V > arr[j].V })
 				}
+				fmt.Fprintln(b, "Commits by author:")
 				for _, it := range arr {
 					fmt.Fprintf(b, "%s: %d\n", it.A, it.V)
+				}
+			}
+
+			// lines changed per author (bar chart)
+			lc := ctrl.State.StatsByRepo[selectedRepo]["commit_line_count_by_author"]
+			if lc != nil {
+				lm := lc.(map[string]int64)
+				type kv2 struct {
+					A string
+					V int64
+				}
+				arr2 := make([]kv2, 0, len(lm))
+				var max int64
+				for a, v := range lm {
+					arr2 = append(arr2, kv2{a, v})
+					if v > max {
+						max = v
+					}
+				}
+				if sortAscAuthors {
+					sort.Slice(arr2, func(i, j int) bool { return arr2[i].V < arr2[j].V })
+				} else {
+					sort.Slice(arr2, func(i, j int) bool { return arr2[i].V > arr2[j].V })
+				}
+				width := 40
+				draw := func(val int64) string {
+					if max <= 0 {
+						return strings.Repeat(".", width)
+					}
+					filled := int(val * int64(width) / max)
+					if filled < 0 {
+						filled = 0
+					}
+					if filled > width {
+						filled = width
+					}
+					return strings.Repeat("█", filled) + strings.Repeat(" ", width-filled)
+				}
+				fmt.Fprintln(b, "\nLines changed by author:")
+				for _, it := range arr2 {
+					fmt.Fprintf(b, "%s: %s %d\n", it.A, draw(it.V), it.V)
 				}
 			}
 		}
