@@ -54,6 +54,41 @@ func (c *Controller) Refresh() error {
     return nil
 }
 
+type Progress struct {
+    Repo      string
+    Total     int
+    Processed int
+}
+
+func (c *Controller) RefreshWithProgress(onUpdate func(Progress)) error {
+    c.State.Loading = true
+    gitScanner := scanner.NewGitScanner()
+    repos, err := gitScanner.ScanDirectory(c.State.RootPath)
+    if err != nil {
+        c.State.Loading = false
+        return err
+    }
+    c.State.Repos = repos
+    c.State.CommitsByRepo = map[string][]analyzer.CommitInfo{}
+    c.State.StatsByRepo = map[string]map[string]interface{}{}
+    for _, repo := range repos {
+        a := analyzer.NewGitAnalyzer(repo)
+        commits, err := a.GetCommitInfoWithProgress(func(processed int, total int) {
+            if onUpdate != nil {
+                onUpdate(Progress{Repo: repo, Total: total, Processed: processed})
+            }
+        })
+        if err != nil {
+            continue
+        }
+        c.State.CommitsByRepo[repo] = commits
+        calc := stats.NewStatsCalculator()
+        c.State.StatsByRepo[repo] = calc.CalculateAll(commits)
+    }
+    c.State.Loading = false
+    return nil
+}
+
 func (c *Controller) ExportJSON() ([]byte, error) {
     out := map[string]interface{}{}
     for repo, commits := range c.State.CommitsByRepo {
